@@ -1,66 +1,58 @@
 package mksya.org;
 
-import mksya.org.entities.*;
-import mksya.org.entities.enums.AccountStatus;
-import mksya.org.entities.enums.OperationType;
-import mksya.org.repositories.AccountOperationRepository;
-import mksya.org.repositories.BankAccountRepository;
-import mksya.org.repositories.CustomerRepository;
+import mksya.org.dto.CustomerDTO;
+import mksya.org.entities.BankAccount;
+import mksya.org.entities.Customer;
+import mksya.org.exceptions.BalanceNotSufficientException;
+import mksya.org.exceptions.BankAccountNotFoundException;
+import mksya.org.exceptions.CustomerNotFoundException;
+import mksya.org.services.BankAccountService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
-import java.math.MathContext;
-import java.util.Date;
-import java.util.UUID;
+import java.util.List;
 import java.util.stream.Stream;
 
 @SpringBootApplication
 public class EbankingBackendApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(EbankingBackendApplication.class, args);
+    public static void main(String[] args) {
+        SpringApplication.run(EbankingBackendApplication.class, args);
 
-	}
+    }
 
-	@Bean
-	CommandLineRunner commandLineRunner(BankAccountRepository bankAccountRepository){
-		return args ->{
-			BankAccount bankAccount=
-					bankAccountRepository.findById("0b2f4090-84e1-4839-9271-62feee75896d").orElse(null);
-			if(bankAccount != null) {
-				System.out.println("***********************");
-				System.out.println(bankAccount.getId());
-				System.out.println(bankAccount.getBalance());
-				System.out.println(bankAccount.getStatus());
-				System.out.println(bankAccount.getCreatedAt());
-				System.out.println(bankAccount.getCustomer().getName());
-				System.out.println(bankAccount.getClass().getSimpleName());
-				if (bankAccount instanceof CurrentAccount) {
-					System.out.println("Overdraft=>" + ((CurrentAccount) bankAccount).getOverDraft());
-				} else if (bankAccount instanceof SavingAccount) {
-					System.out.println("Interest rate=>" + ((SavingAccount) bankAccount).getInterestRate());
-				}
-				bankAccount.getAccountOperations().forEach(op -> {
-					System.out.println(op.getType() + "\t" + op.getOperationDate() + "\t" + op.getAmount());
-				});
-			}
-		};
-	}
+    @Bean
+    CommandLineRunner commandLineRunner(BankAccountService bankAccountService) {
+        return args -> {
+            Stream.of("BigBlue", "Kaesun", "Krya").forEach(name -> {
+                CustomerDTO customer = new CustomerDTO();
+                customer.setName(name);
+                customer.setEmail(name + "@gmail.com");
+                bankAccountService.saveCustomer(customer);
+            });
+            bankAccountService.listCustomers().forEach(customer -> {
+                try {
+                    bankAccountService.saveCurrentBankAccount(Math.random() * 90000, 9000, customer.getId());
+                    bankAccountService.saveSavingBankAccount(Math.random() * 120000, 5.5, customer.getId());
+                    List<BankAccount> bankAccounts = bankAccountService.bankAccountList();
+                    for (BankAccount bankAccount : bankAccounts) {
+                        for (int i = 0; i < 10; i++) {
+                            bankAccountService.credit(bankAccount.getId(), 10000 + Math.random() * 120000, "Credit");
+                            bankAccountService.debit(bankAccount.getId(), 10000 + Math.random() * 9000, "Debit");
+                        }
+                    }
+                } catch (CustomerNotFoundException e) {
+                    e.printStackTrace();
+                } catch (BankAccountNotFoundException | BalanceNotSufficientException e) {
+                    e.printStackTrace();
+                }
+            });
+        };
 
-	//@Bean
-	CommandLineRunner start(CustomerRepository customerRepository,
-							BankAccountRepository bankAccountRepository,
-							AccountOperationRepository accountOperationRepository){
-	return args -> {
-		Stream.of("BigBlue","Kaesun","Krya").forEach(name->{
-			Customer customer= new Customer();
-			customer.setName(name);
-			customer.setEmail(name+"@gmail.com");
-			customerRepository.save(customer);
-		});
-		customerRepository.findAll().forEach(cust->{
+        //@Bean
+		/*customerRepository.findAll().forEach(cust->{
 			CurrentAccount currentAccount = new CurrentAccount();
 			currentAccount.setId(UUID.randomUUID().toString());
 			currentAccount.setBalance(Math.random()*90000);
@@ -92,8 +84,8 @@ public class EbankingBackendApplication {
 
 
 		});
-	};
+	};*/
 
-	}
+    }
 
 }

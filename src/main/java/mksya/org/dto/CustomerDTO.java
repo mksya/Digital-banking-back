@@ -1,22 +1,18 @@
-package mksya.org.entities;
+package mksya.org.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import mksya.org.entities.BankAccount;
 
 import javax.persistence.*;
 import java.util.List;
 
-@Entity
 @Data @NoArgsConstructor @AllArgsConstructor
-public class Customer {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class CustomerDTO {
     private Long id;
     private String name;
     private String email;
-    @OneToMany (mappedBy = "customer")
-    @JsonProperty(access=JsonProperty.Access.WRITE_ONLY)
-    private List<BankAccount> bankAccounts;
 
 }
